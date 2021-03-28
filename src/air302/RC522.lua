@@ -1,5 +1,5 @@
 ----------------------------------------------------------------
--- RC522 RFID Reader for Air302 LUATOS
+-- RC522 RFID Reader for Air302 LuatOS
 -- By wendal & Darren
 
 -- This is a port of:
@@ -64,6 +64,12 @@ end
 --  Writes to a register
 --    address    The address of the register
 --    value      The value to write to the register
+
+-- 写入寄存器
+-- @api    RC522.dev_write(address,value)
+-- @number address 寄存器的地址
+-- @number value   写入寄存器的值
+
 function RC522.dev_write(address, value)
     pin_ss(0)
     local data = string.char((address<<1)&0x7E) .. string.char(value)
@@ -77,6 +83,12 @@ end
 --    address    The address of the register
 -- returns:
 --    the byte at the register
+
+-- 读取寄存器
+-- @api    RC522.dev_read(address)
+-- @number address 寄存器地址
+-- @return byte 寄存器中的byte
+
 function RC522.dev_read(address)
     local val = 0;
     pin_ss(0)
@@ -93,6 +105,12 @@ end
 --  Adds a bitmask to a register
 --    address    The address of the register
 --    mask       The mask to update the register with
+
+-- 向寄存器添加位掩码
+-- @api    RC522.set_bitmask(address,mask)
+-- @number address 寄存器的地址
+-- @number mask    用于更新寄存器的掩码
+
 function RC522.set_bitmask(address, mask)
     local current = RC522.dev_read(address)
     RC522.dev_write(address,current | mask)
@@ -102,14 +120,24 @@ end
 --  Removes a bitmask from a register
 --    address    The address of the register
 --    mask       The mask to update the register with
+
+-- 向寄存器删除位掩码
+-- @api    RC522.clear_bitmask(address,mask)
+-- @number address 寄存器的地址
+-- @number mask    用于更新寄存器的掩码
+
 function RC522.clear_bitmask(address, mask)
     local current = RC522.dev_read(address)
     RC522.dev_write(address, current & (~mask))
 end
 
-
 --------------------------------------------------------
 --  Reads the firmware version
+
+-- 读取硬件版本信息
+-- @api RC522.getFirmwareVersion()
+-- @return number 版本号
+
 function RC522.getFirmwareVersion()
   return RC522.dev_read(0x37)
 end
@@ -117,6 +145,12 @@ end
 --------------------------------------------------------
 --  Checks to see if there is a TAG in the vacinity
 --  Returns false if tag is present, otherwise returns true
+
+-- 检查空位中是否有标签
+-- @api RC522.request()
+-- @return boolean 存在标签则返回false，否则返回true
+-- @return number  读取的数据
+
 function RC522.request()
     req_mode = { 0x26 }   -- find tag in the antenna area (does not enter hibernation)
     err = true
@@ -140,6 +174,15 @@ end
 --    error          true/false
 --    back_data      A table of the returned data (index starting at 1)
 --    back_length    The number of bits in the returned data
+
+-- 发送命令
+-- @api RC522.card_write(command,data)
+-- @number command 发送到RC522的地址
+-- @table  data    完成命令所需的数据
+-- @retrun boolean  error       成功false 失败true
+-- @retrun table    back_data   返回数据表（索引从1开始）
+-- @return number   back_length 返回数据中的位数
+
 function RC522.card_write(command, data)
     back_data = {}
     back_length = 0
@@ -232,6 +275,13 @@ end
 --    returns:  
 --               error      true/false
 --               back_data  the serial number of the tag
+
+
+-- 读取一个TAG的序列号以便可以识别(这个序列号是0扇前十位)
+-- @api RC522.anticoll()
+-- @return boolean err       读取成功false 失败true
+-- @return number  back_data 标签的序列号 (10位)
+
 function RC522.anticoll()
     back_data = {}
     serial_number = {}
@@ -260,11 +310,51 @@ function RC522.anticoll()
     return error, back_data
 end
 
+-- 读取一个TAG的序列号以便可以识别(这个序列号是0扇前八位)
+-- @api RC522.anticoll_8()
+-- @return boolean err       读取成功false 失败true
+-- @return number  back_data 标签的序列号 (8位)
+
+function RC522.anticoll_8()
+    back_data = {}
+    serial_number = {}
+
+    serial_number_check = 0
+    
+    RC522.dev_write(0x0D, 0x00)
+    serial_number[1] = act_anticl
+    serial_number[2] = 0x20
+
+    err, back_data, back_bits = RC522.card_write(mode_transrec, serial_number)
+    if not err then
+        if table_maxn(back_data) == 5 then
+            for i, v in ipairs(back_data) do
+                serial_number_check = serial_number_check ^ back_data[i]
+            end 
+            
+            if serial_number_check ~= back_data[4] then
+                err = true
+            end
+        else
+            err = true
+        end
+    end
+    table.remove(back_data)
+    table.remove(back_data)
+    return error, back_data
+end
+
 --------------------------------------------------------
 --  Uses the RC522 to calculate the CRC of a tabel of bytes
 --      Data          Table of bytes to calculate a CRC for
 --  returns:  
 --      ret_data      Tabel of the CRC values; 2 bytes
+
+-- 使用RC522计算表的CRC
+-- @api RC522.calculate_crc(data)
+-- @table   data  用于计算CRC的一个表
+-- @return  table ret_data  Tabel的CRC值; 2字节
+
 function RC522.calculate_crc(data)
     RC522.clear_bitmask(0x05, 0x04)
     RC522.set_bitmask(0x0A, 0x80)               -- clear the FIFO pointer
@@ -298,6 +388,13 @@ end
 --  returns:  
 --      error         true = error; false = success
 --      SAK           the Select-ACK value
+
+-- 选择范围内的TAG
+-- @api RC522.select_tag(uid)
+-- @table  uid 标签的uid序列号，以字节表形式
+-- @retrun boolean error 成功false 失败true
+-- @retrun number  SAK   确认Select-ACK值
+
 function RC522.select_tag(uid)
     back_data = {}
     buf = {}
@@ -326,6 +423,13 @@ end
 --  returns:  
 --      error         true = error; false = success
 --      back_data     the returned data in a table
+
+-- 从所选TAG读取一个块
+-- @api RC522.readTag(block_address)
+-- @number block_address    要读取的块的编号
+-- @return boolean error    成功false 失败true 
+-- @retrun table back_data 表中返回的数据
+
 function RC522.readTag(block_address)
     buf = {}
     table.insert(buf, act_read)
@@ -347,6 +451,13 @@ end
 --      data             a table of bytes to write
 --  returns:  
 --      error         true = error; false = success
+
+-- 将块写入所选的TAG
+-- @api RC522.writeTag(block_address,data)
+-- @number block_address    要读取的块的编号
+-- @table  data             要写入的字节表
+-- @retrun boolean error    成功false 失败true
+
 function RC522.writeTag(block_address, data)
     buf = {}
     table.insert(buf, act_write)
@@ -386,6 +497,16 @@ end
 --      uid              serial number of the tag as a table of bytes
 --  returns:  
 --      error            true = error; false = success
+
+-- 验证标签的扇区
+-- 注意：您必须先对一个块进行身份验证，然后才能从该块中进行读取/写入。 然后验证下一个扇区，依此类推
+-- @api RC522.card_auth(auth_mode,block_address,key,uid)
+-- @string auth_mode     RFID.auth_a或RFID.auth_b
+-- @number block_address 验证的块的编号
+-- @table  key           包含密钥的表
+-- @table  uid           标签的uid序列号，以字节表形式
+-- @retrun boolean error 成功false 失败true
+
 function RC522.card_auth(auth_mode, block_address, key, uid)
     buf = {}
     table.insert(buf, auth_mode)
@@ -410,6 +531,9 @@ function RC522.card_auth(auth_mode, block_address, key, uid)
 
     return error
 end
+
+-- RC522初始化
+-- @api RC522.setup(rst,ss,spin)
 
 function RC522.setup()
     -- spi.setup(0,nil,0,0,8,2000000,spi.MSB,1,1)
