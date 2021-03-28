@@ -1,10 +1,8 @@
-----------------------------------------------------------------------
--- Main
-----------------------------------------------------------------------
 module(...,package.seeall)
 
 --------------------------------------------------------
---  Converts a table of numbers into a HEX string
+-- Converts a table of numbers into a HEX string
+-- 将数字表转换为十六进制字符串
 function appendHex(t)
   strT = ""
   for i,v in ipairs(t) do
@@ -12,9 +10,6 @@ function appendHex(t)
   end
   return strT
 end
-
----------------------------------------------------
--- Initialise the RC522
 
 
 sys.taskInit(function()
@@ -29,16 +24,17 @@ sys.taskInit(function()
     isTagNear, cardType = RC522.request()
     
     if isTagNear == true then
-      --tmr.stop(0)
       err, serialNo = RC522.anticoll()
-      print("Tag Found: "..appendHex(serialNo).."  of type: "..appendHex(cardType))
-
+      print("Tag Found: "..appendHex(serialNo).."  of type: "..appendHex(cardType)) --打印读取的ic卡编号（10位id）
+      
+      errr ,serialNo2 = RC522.anticoll_8()
+      log.info("tag", serialNo2)  --打印读取的ic卡编号（8位id）
+      
       -- Selecting a tag, and the rest afterwards is only required if you want to read or write data to the card
-    
       err, sak = RC522.select_tag(serialNo)
+
       if err == false then
         print("Tag selected successfully.  SAK: 0x"..string.format("%X", sak))
-    
     
         for i = 0,63 do
           err = RC522.card_auth(auth_a, i, keyA, serialNo)     --  Auth the "A" key.  If this fails you can also auth the "B" key
@@ -67,6 +63,7 @@ sys.taskInit(function()
       print(" ")
     
       -- halt tag and get ready to read another.
+      -- 暂停并准备阅读其他标签。
       buf = {}
       buf[1] = 0x50  --MF1_HALT
       buf[2] = 0
@@ -76,17 +73,8 @@ sys.taskInit(function()
       err, back_data, back_length = RC522.card_write(mode_transrec, buf)
       RC522.clear_bitmask(0x08, 0x08)    -- Turn off encryption
       
-      --tmr.start(0)
-      
     else 
       print("NO TAG FOUND")
     end
   end
 end)
-
---[[
-tmr.alarm(0, 100, tmr.ALARM_AUTO, function()
-
-
-end)  -- timer
-]]

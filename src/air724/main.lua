@@ -1,7 +1,6 @@
 --必须在这个位置定义PROJECT和VERSION变量
 --PROJECT：ascii string类型，可以随便定义，只要不使用,就行
 --VERSION：ascii string类型，如果使用Luat物联云平台固件升级的功能，必须按照"X.X.X"定义，X表示1位数字；否则可随便定义
--- MODEL = "Air202"
 --PRODUCT_KEY = "FlAQcpoFXH7EpYfD5Ao289iUBQT5Y30H"
 PROJECT = "RC522Test"
 VERSION = "1.0.0"
@@ -24,9 +23,6 @@ require "net"
 --每1分钟查询一次GSM信号强度
 --每1分钟查询一次基站信息
 net.startQueryAll(60000, 60000)
-
--- require "wdt"
--- wdt.setup(pio.P0_30, pio.P0_31)
 
 
 --加载网络指示灯功能模块

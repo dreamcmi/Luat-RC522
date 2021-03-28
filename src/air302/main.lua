@@ -1,7 +1,7 @@
---- 模块功能：rc522-demo
--- @module rc522·
+-- 模块功能：rc522-demo
+-- @module rc522
 -- @author Wendal & Darren
--- @release 2021.03.26
+-- @release 2021.3.26
 
 PROJECT = "air302_rc522_demo"
 VERSION = "1.0.0"
@@ -33,17 +33,18 @@ sys.taskInit(function()
   while true do
     sys.wait(1000)
     isTagNear, cardType = RC522.request()
-    
     if isTagNear == true then
       err, serialNo = RC522.anticoll()
-      log.info("","Tag Found: "..appendHex(serialNo).."  of type: "..appendHex(cardType))
+      print("Tag Found: "..appendHex(serialNo).."  of type: "..appendHex(cardType)) --打印读取的ic卡编号（10位id）
+      
+      errr ,serialNo2 = RC522.anticoll_8()
+      log.info("tag", serialNo2)  --打印读取的ic卡编号（8位id）
 
       -- Selecting a tag, and the rest afterwards is only required if you want to read or write data to the card
-    
       err, sak = RC522.select_tag(serialNo)
+
       if err == false then
         log.info("","Tag selected successfully.  SAK: 0x"..string.format("%X", sak))
-    
     
         for i = 0,63 do
           err = RC522.card_auth(auth_a, i, keyA, serialNo)     --  Auth the "A" key.  If this fails you can also auth the "B" key
