@@ -1,9 +1,5 @@
 # Luat-RC522
 
-原仓库： https://gitee.com/wendal/luat-rc522
-
-​				https://gitee.com/dreamcmi/luat-rc522
-
 #### 介绍
 
 合宙Luat读写RC522
@@ -107,7 +103,3 @@ main.lua  -- demo的入口
 
 RC522.lua -- 驱动程序  
 main.lua  -- demo的入口  
-
-#### 使用说明
-
-LuatOS仓库：https://gitee.com/openLuat/LuatOS
